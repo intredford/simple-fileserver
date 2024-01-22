@@ -97,3 +97,9 @@
 	text-align: center;
 	padding: 0.1em;
 }
+
+@media screen and (max-width: 962px) {
+	.file-qrcode:hover {
+		transform: none;
+	}
+}
