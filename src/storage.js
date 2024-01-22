@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 
+fs.mkdirSync(process.env.FOLDER, { recursive: true });
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_FOLDER = process.env.FOLDER || 'public/uploads';
 const pathToUploads = path.join(__dirname, '../', UPLOAD_FOLDER);
