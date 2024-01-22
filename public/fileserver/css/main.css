@@ -1,0 +1,110 @@
+/* Общие стили для страницы */
+body {
+	margin: 0;
+	display: flex;
+	justify-content: center;
+	font-family: 'Inter', sans-serif;
+	line-height: 1.4;
+	font-size: 1rem;
+	text-rendering: optimizeLegibility;
+	font-feature-settings: "kern" 1,"liga" 1,"calt" 1;
+	min-height: 100vh;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+/* Стили для списков */
+ul {
+	margin-top: 0.5em;
+	padding-left: 1.33em;
+}
+	ul > li {
+		margin-bottom: 0.5em;
+	}
+
+/* Стили для заголовков */
+h1 {
+	font-size: 1.6em;
+	margin-bottom: 0.5em;
+}
+h2 {
+	font-size: 1.3em;
+	margin-bottom: 0.4em;
+}
+
+/* Стили для элементов формы */
+input[type="checkbox"] {
+	margin-left: 0;
+}
+label {
+	font-size: 85%;
+}
+button, select,
+input[type="file"] + label {
+	background-image: linear-gradient(#eee, #eaeaea);
+	background-color: #eee;
+	border: 1px solid #e1e1e1;
+	border-radius: 0.2em;
+	padding: 0.2em 0.5em;
+	font-family: inherit;
+	box-shadow: 0 1px 0 rgba(20,20,20,0.04);
+	line-height: inherit;
+	font-size: 80%;
+}
+	button:hover,
+	select:hover,
+	input[type="file"] + label:hover {
+		background-image: linear-gradient(#e6e6e6, #e1e1e1);
+		background-color: #e6e6e6;
+		border: 1px solid #ccc;
+	}
+	select > option {
+		font-size: 0.95em;
+	}
+	button:active,
+	select:active,
+	input[type="file"] + label:active {
+		background-color: #dfdfdf;
+		border: 1px solid #bebebe;
+	}
+
+input[type="file"] {
+	display: none;
+}
+input[type="file"] + label {
+	padding: 0.5em 0.7em;
+}
+
+/* Стили для текстовых полей */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+	border: 1px solid #e1e1e1;
+	padding: 0.2em 0 0.2em 0.3em;
+	border-radius: 0.2em;
+	font-family: inherit;
+	line-height: inherit;
+	font-size: 80%;
+}
+
+.disabled, .disabled * {
+	opacity: 0.7;
+	cursor: not-allowed !important;
+}
+
+/* Стили для горизонтальной линии */
+hr {
+	height: 1px;
+	border: none;
+	background-color: lightgray;
+	opacity: 0.66;
+}
+
+@media screen and (max-width: 962px) {
+	body {
+		font-size: 0.95rem;
+	}
+	h1 {
+		font-size: 1.8em;
+	}
+}

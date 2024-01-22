@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel = "stylesheet" href = "./font/Inter/style.css">
+	<link rel = "stylesheet" href = "./css/main.css">
+	<link rel = "stylesheet" href = "./css/index.css">
+
+	<link rel="icon" type="image/png" href="/favicon.png">
+
+	<title>Файловый сервер / загрузка</title>
+
+	<script type="module">
+		Array.prototype.last = function() { return this[this.length - 1] }
+		import { createApp } from './js/petite-vue.min.js'
+
+		createApp({
+			files: [ ],
+			deleteAfter: 24,
+			noDelete: false,
+			dragging: false,
+			uploaded: false,
+			error: false,
+			
+			handleFiles(event) {
+				const files = event.target.files
+				console.log(files)
+
+				if (this.uploaded && files.length > 0) {
+					this.files = []
+					this.uploaded = false
+				}
+
+				for (let file of files) {
+
+					file = { 
+						raw: file, // сам объект `File`
+						progress: 0,
+						previewError: false,
+					}
+
+					file.name = '/'+file.raw.name
+					file.hasPreview = file.raw.type.includes('image') && file.raw.size < 15*1024*1024
+
+					if (file.hasPreview) {
+						// Генерируем превью картинкам
+						const reader = new FileReader()
+						reader.onload = (e) => {
+							file.preview = e.target.result
+							this.files.push(file)
+						}
+						reader.readAsDataURL(file.raw)
+					} else {
+						// Извлекаем формат
+						file.format = file.name.split('.').last().toLowerCase()
+						this.files.push(file)
+					}
+				}
+			},
+
+			handleDrop(event) {
+				this.handleFiles({ 'target': { 'files': event.dataTransfer.files } })
+				this.dragging = false
+			},
+
+			removeFile(index) {
+				this.files.splice(index, 1)
+			},
+
+			setPreviewError(index) {
+				this.files[index].previewError = true
+				const files = [ ...this.files ]
+				this.files = [  ]
+				this.$nextTick(() => {
+					this.files = [...files] // Обновляет список
+				})
+				// Способ говно, но другого я не придумал. Просто так первая строка не работает, $forceUpdate тут нет.
+			},
+
+			uploadFiles() {
+				const xhr = new XMLHttpRequest() // fetch не поддерживает progress
+				const form = new FormData()
+
+				this.error = false
+
+				form.append('deleteAfter', this.deleteAfter)
+				form.append('noDelete', this.noDelete)
+
+				this.files.forEach((file, index) => {
+					form.append(file.raw.name, file.name)
+				}) // оригинальное имя файла : пользовательское имя и путь
+
+				this.files.forEach((file, index) => {
+					form.append('files', file.raw)
+				}) // Так надо. Все файлы должны быть в конце, иначе Multer на сервере обосрётся.
+
+				xhr.upload.addEventListener('progress', event => {
+					console.log(event)
+					if (event.lengthComputable) {
+						const progress = Math.round((event.loaded / event.total) * 100)
+						this.files.forEach(file => { file.progress = progress })
+					}
+				})
+
+				xhr.open('POST', '/api/upload')
+
+				xhr.setRequestHeader('Authorization', 'Basic ' + (prompt('Пароль')))
+
+				xhr.send(form)
+
+				xhr.onload = () => {
+					const response = JSON.parse(xhr.responseText);
+
+					if (xhr.status === 200) {
+
+						this.error = false
+
+						this.files.forEach((file, i) => { // добавить ссылки и qr-коды
+							file.link = response[i].link 
+							file.QRCode = response[i].QRCode
+						})
+						this.uploaded = true
+
+						document.querySelectorAll('input[name="url"]').forEach(input => { // прокрутить все инпуты в конец
+							input.focus();
+							input.setSelectionRange(input.value.length, input.value.length);
+							input.blur();
+						});
+
+					} else if (xhr.status === 401) {
+						alert(response.message)
+						this.error = true
+					} else {
+						alert(`Ошибка ${xhr.status}` + response.message ? `\n ${response.message}` : '')
+						this.error = true
+					}
+				};
+
+			},
+
+			hourLabel() {
+				const hours = this.deleteAfter
+				if (hours % 10 === 1 && hours % 100 !== 11) return "час"
+				if (hours % 10 >= 2 && hours % 10 <= 4 && (hours % 100 < 10 || hours % 100 >= 20)) return "часа"
+				return "часов"
+			},
+
+			showInfo() {
+				alert(
+`# Файловый сервер - инструкция
+
+1. Выберите или перетащите файлы.
+2. Если надо, можно изменить название файла или добавить путь. Например, если вы напишите \`/test/path/example.png\`, то файл будет доступен по этому пути. Слеш в начале ставить не обязательно.
+3. Загрузите файлы на сервер, потребуется пароль.
+4. Готово! Теперь файлы доступны по указанным адресам.
+
+Если вы указали путь, по которому уже лежит файл с таким же именем, он будет перезаписан.
+
+Обязательно указывайте формат файла, иначе он будет отображаться неккоректно (хотя если его скачать и поставить ему формат обратно, всё будет в порядке). 
+
+Ахтунг! Файловый сервер предназначен для того, чтобы делиться файлами. Не используйте его для хранения личной информации!
+`) 
+			}
+		}).mount()
+	</script>
+</head>
+
+<body 
+	v-data="fileUpload()"
+	@drop.prevent="handleDrop" 
+	@dragenter.stop="dragging=true"
+	@dragleave.stop="dragging=false"
+	@dragover.stop.prevent
+	@click = "dragging=false"
+>
+
+	<noscript class = "noscript">
+		<header>
+			Включите JavaScript
+		</header>
+	</noscript>
+
+	<form 
+		class = "form" 
+		enctype="multipart/form-data"
+		:style = "{ 'pointer-events': dragging ? 'none' : 'auto' }"
+		@submit.prevent="uploadFiles"
+	>
+		
+		<div style = "width: fit-content; margin: auto;">
+			<input 
+				type="file" 
+				id="fileInput" 
+				name="files" 
+				multiple 
+				accept="*/*" 
+				@input="handleFiles"
+			>
+			<label class = "form-file" for = "fileInput">📎 Выберите файлы</label>
+			<div 
+				class = "drag-n-drop"
+				v-show = "dragging"
+			></div>
+		</div>
+
+		<div v-if = "files.length">
+			<hr style = "margin-top: 1em">
+
+			<div class = "files">
+				<div 
+					class = "file"
+					v-for = "file, index in files"
+				>
+
+					<div class = "file-preview">
+
+						<img
+							v-if = "file.hasPreview"
+							:src = "file.preview"
+						>
+						<img
+							v-else-if = "!file.previewError"
+							class = "icon"
+							:src = "`/icons/high-contrast/${file.format}.svg`"
+							@error = "setPreviewError(index)"
+						>
+						<span
+							v-else-if = "file.format.length <= 4"
+							class = "file-format"
+							>
+							{{ file.format }}
+						</span>
+						<img
+							v-else
+							class = "icon"
+							:src = "`/icons/high-contrast/blank.svg`"
+						>
+					</div>
+
+					<div 
+						class = "file-name"
+					>
+						<input 
+							v-model = "file.link ? file.link : file.name" 
+							name = "url"
+							size = "22"
+							placeholder="URL файла"
+							title = "Форматы будет приведены к нижнему регистру"
+							v-bind = "file.link ? { readonly: true } : {}"
+							required
+						>
+						<div class = "file-progress">
+							<div 
+								class = "file-progress-value"
+								:style = "{ 
+									width: file.progress + '%',
+									'background-color': file.progress < 100 ? '#0073ee' : error ? 'red' : '#67d264'
+								}"
+								v-if = "file.progress"
+							></div>
+						</div>
+					</div>
+
+					<div class = "file-remove" v-if = "!file.QRCode">
+						<button @click = "removeFile(index)" type = "button"><span>╳</span></button>
+					</div>
+
+					<img
+						class = "file-qrcode"
+						:src = "file.QRCode"
+						alt = "QR-код"
+						v-else
+					>
+
+				</div>
+			</div>
+
+			<hr>
+
+			<div class = "form-field" :class = "{'disabled': noDelete}">
+				<label for="deleteAfter">Удалить через</label>
+				<input 
+					v-model="deleteAfter"
+					:disabled = "noDelete"
+					type="number" 
+					id="deleteAfter" 
+					name="deleteAfter" 
+					min="1" 
+					size="2"
+					step="1"
+					required
+					style="appearance: textfield; height: 1.5em"
+				>
+				<label for="deleteAfter">{{ hourLabel() }}</label>
+			</div>
+
+			<div class = "form-field">
+				<input 
+					type="checkbox" 
+					id="noDelete" 
+					name="noDelete"
+					v-model="noDelete"
+				><label for="noDelete">Не удалять</label>
+			</div>
+
+			<button 
+				class = "form-upload"
+				type="submit"
+			>
+				Загрузить
+			</button>
+
+		</div>
+	
+	</form>
+
+	<button class = "info" @click = "showInfo" title = "Справка">?</button>
+
+</body>
+
+</html>
