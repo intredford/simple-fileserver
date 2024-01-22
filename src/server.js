@@ -85,7 +85,7 @@ You can contact mail@dimius.ru
 });
 
 // Запуск сервера
-const port = 3001;
+const port = process.env.PORT;
 app.listen(port, () => {
 	console.log(`Fileserver is running on port ${port}`);
 });
