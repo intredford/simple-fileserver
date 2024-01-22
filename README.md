@@ -13,15 +13,29 @@
 git clone https://github.com/intredford/simple-fileserver
 ```
 
-**Шаг 2:** создайте файл `.env` и пропишите переменные окружения
+**Шаг 2:** установите зависимости
+```bash
+npm install
 ```
-PASSWORD="yourpassword" # Пароль
+
+**Шаг 3:** создайте файл `.env` и пропишите переменные окружения
+```
+PASSWORD="yourpassword"
 FOLDER="public/uploads" # Относительный путь к папке для загружаемых файлов. Рекомендую оставить это значение, иначе придётся менять код :)
-HOST="https://example.com" # Хост (используется для формирования ссылок)
+HOST="https://example.com" # Хост используется для формирования ссылок
+PORT="3000"
+```
+
+**Шаг 4:** запустите сервер
+```bash
+node index.js
+# или
+pm2 start index.js --name "fileserver"
 ```
 
 ### Разработка
 
+Вместо шага 4 пропишите
 ```bash
 npm run dev
 ```
