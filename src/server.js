@@ -52,17 +52,9 @@ app.post('/api/upload', checkPassword, upload.array('files'), async (req, res) =
 	res.status(200).send(response);
 });
 
-// В корне показывыать интерфейс загрузки
-app.use('/', express.static('public/fileserver'));
-
-// В остальных случаях (кроме /api) отдавать файлы
-app.use((req, res, next) => {
-	if (req.path !== '/api') {
-		express.static(UPLOAD_FOLDER)(req, res, next);
-	} else {
-		next();
-	}
-});
+// Статичные папки
+app.use(express.static('public/fileserver'));
+app.use(express.static('public/uploads'));
 
 // Create 404 route
 app.use((req, res) => {
