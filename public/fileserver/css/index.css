@@ -102,4 +102,7 @@
 	.file-qrcode:hover {
 		transform: none;
 	}
+	.file-remove span {
+		font-weight: bold;
+	}
 }
