@@ -59,8 +59,12 @@ app.use(express.static('public/uploads'));
 // Create 404 route
 app.use((req, res) => {
 	res.status(404).send(
-`<!DOCTYPE html><pre>
-<b>404 / Не найдено</b>
+`<!DOCTYPE html>
+<head>
+<link rel="icon" type="image/png" href="/favicon.svg">
+</head>
+<pre>
+<b>404</b>
 
 "${req.url}" не существует или был удалён.
 Связаться можно по mail@dimius.ru
