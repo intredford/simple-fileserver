@@ -62,18 +62,19 @@ app.use((req, res) => {
 `<!DOCTYPE html>
 <head>
 <link rel="icon" type="image/png" href="/favicon.svg">
+<title>[404] - ${req.path}</title>
 </head>
 <pre>
 <b>404</b>
 
-"${req.url}" не существует или был удалён.
+Контент на "${req.url}" не существует или был удалён.
 Связаться можно по mail@dimius.ru
 
 ---
 
 <b>404 / Not Found</b>
 
-"${req.url}" does not exist or had been deleted.
+Content on "${req.url}" does not exist or had been deleted.
 You can contact mail@dimius.ru
 </pre>
 <style>pre{line-height:1.4;white-space:break-spaces;}</style>`
