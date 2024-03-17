@@ -18,7 +18,7 @@ git clone https://github.com/intredford/simple-fileserver
 npm install
 ```
 
-**Шаг 3:** создайте файл `.env-example` в `env` и перепишите переменные окружения под себя
+**Шаг 3:** создайте файл `.env-example` в `.env` и перепишите переменные окружения под себя
 
 **Шаг 4:** запустите сервер
 ```bash
