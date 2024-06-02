@@ -248,7 +248,7 @@
 							name = "url"
 							size = "22"
 							placeholder="URL файла"
-							title = "Форматы будет приведены к нижнему регистру"
+							:title = "file.QRCode ? 'Ссылка на файл' : 'Относительный адрес файла'"
 							v-bind = "file.link ? { readonly: true } : {}"
 							required
 						>
