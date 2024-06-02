@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel = "stylesheet" href = "./css/main.css">
+
+	<link rel="icon" type="image/png" href="/favicon.svg">
+
+	<title>Файловый сервер /  дерево файлов</title>
+
+    <script type="module">
+
+        Array.prototype.last = function() { return this[this.length - 1] }
+        import { createApp } from './js/petite-vue.min.js'
+
+        createApp({
+            tree: [],
+
+            async requestTree() {
+
+                const res = await fetch('/api/filetree', {
+                    headers: {
+                        'Authorization': 'Basic ' + prompt('Введите пароль')
+                    }
+                })
+
+                // Преобразовываем дерево в плоский список с указанием глубины вложенносости
+                // (так проще отобразить дерево с помощью Vue)
+                function flattenNodes(nodes, depth = 0) {
+                    const flat = nodes.reduce((arr, node) => {
+                        const { type, name, link, children } = node;
+                        arr.push({ type, name, link, depth });
+
+                        if (Array.isArray(children)) {
+                            arr.push(...flattenNodes(children, depth + 1));
+                        }
+                        return arr;
+                    }, []);
+
+                    // Перемещаем корневые файлы в начало
+                    for (const node of flat) {
+                        if (node.depth === 0 && node.type === 'file') {
+                            flat.splice(flat.indexOf(node), 1)
+                            flat.unshift(node)
+                        }
+                    }
+                    
+                    return flat
+                }
+                this.tree = flattenNodes(await res.json())
+                console.log(this.tree)
+
+            }
+        }).mount()
+
+    </script>
+</head>
+<body 
+    v-data="requestTree()"
+    @vue:mounted = "requestTree()"
+    v-cloak
+>
+    <div class = "tree">
+
+        <div 
+            class = "node"
+            :class = "node.type"
+            v-for = "node, index in tree"
+            :style = "{
+                'margin-left': node.depth * 2 + 'em'
+            }"
+        >
+
+            <a 
+                v-if = "node.type === 'file'" 
+                :href = "node.link" 
+                :style = "{ 
+                    'margin-bottom': 
+                    (tree[index+1] && tree[index+1].depth < node.depth)
+                    || (tree[index+1] && tree[index+1].type === 'folder' && node.type === 'file')
+                    ? '1em' : '0' 
+                }"
+            >
+                <img :src = "`/icons/high-contrast/${node.name.split('.').last()}.svg`" class = "icon">
+                <span class = "name">{{ node.name }}</span>
+            </a>
+
+            <span v-else class = "name">/{{ node.name }}/</span>
+
+        </div>
+
+        <p v-if = "!tree.length">Авторизуйтесь</p>
+
+    </div>
+</body>
+
+<style>
+body {
+    background-color: #f0f0f0;
+    font-family: 'Fira Code', 'IBM Plex Mono', monospace;
+}
+
+.tree {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    height: fit-content;
+    padding: 1.5em;
+    border-radius: 0.5em;
+    background-color: white;
+    outline: 1px solid #e1e1e1;
+}
+
+.file .icon {
+    width: 0.8em;
+    height: 0.8em;
+}
+.file a {
+    display: flex;
+    align-items: center;
+    gap: 0.33em;
+}
+
+
+
+</style>
+</html>

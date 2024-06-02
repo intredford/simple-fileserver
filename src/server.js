@@ -3,13 +3,14 @@ const app = express();
 
 import QRCode from 'qrcode'
 
-const UPLOAD_FOLDER = process.env.FOLDER || 'public/uploads';
 const HOST = process.env.HOST;
 
 import { upload } from './storage.js'
 import { uploads } from './database.js'
 
 import { checkPassword } from './auth.js';
+
+Array.prototype.last = function() { return this[this.length - 1] }
 
 // Загрузка файлов
 app.post('/api/upload', checkPassword, upload.array('files'), async (req, res) => {
@@ -52,9 +53,52 @@ app.post('/api/upload', checkPassword, upload.array('files'), async (req, res) =
 	res.status(200).send(response);
 });
 
+// Дерево файлов
+app.get('/api/filetree', checkPassword, async (req, res) => {
+
+	const files = await uploads.parse()
+	const tree = []
+	
+	for (const file of files) {
+		
+		let fileNode = { type: 'file', name: file.link.split('/').last(), link: HOST + file.link }
+
+		const folders = file.link.split('/').slice(0, -1).filter(folder => folder)
+
+		if (!folders.length) {
+			tree.push(fileNode)
+		} else {
+
+			let parent = tree
+			for (const folder of folders) {
+				let found = parent.find(node => node.name === folder)
+				if (!found) {
+					found = {
+						type: 'folder',
+						name: folder,
+						children: []
+					}
+					parent.push(found)
+				}
+				parent = found.children
+			}
+			parent.push(fileNode)
+			
+		}
+	}
+
+	res.json(tree)
+})
+
 // Статичные папки
 app.use(express.static('public/fileserver'));
 app.use(express.static('public/uploads'));
+
+
+// Короткий адрес для списка файлов
+app.get('/ls', (req, res) => {
+	res.redirect('/ls.html')
+})
 
 // Create 404 route
 app.use((req, res) => {
