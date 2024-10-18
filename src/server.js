@@ -105,6 +105,7 @@ app.use((req, res) => {
 	res.status(404).send(
 `<!DOCTYPE html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="/favicon.svg">
 <title>[404] - ${req.path}</title>
 </head>
