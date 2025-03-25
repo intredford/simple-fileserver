@@ -1,8 +1,12 @@
 import 'dotenv/config'
 
+import cors from 'cors'
+
 import { schedule } from 'node-cron'
 
-import './src/server.js'
+import app from './src/server.js'
+
+app.use(cors({ origin: false }))
 
 import { deleteExpiredFiles, deleteEmptyFolders } from './src/cleaner.js'
 import { pathToUploads } from './src/storage.js'
@@ -17,3 +21,4 @@ const clean = async () => {
 await clean()
 
 schedule('0 * * * *', clean);
+
