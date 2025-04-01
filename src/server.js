@@ -3,6 +3,8 @@ const app = express();
 
 import QRCode from 'qrcode'
 
+import cors from 'cors';
+
 const HOST = process.env.HOST;
 
 import { upload } from './storage.js'
@@ -92,7 +94,7 @@ app.get('/api/filetree', checkPassword, async (req, res) => {
 
 // Статичные папки
 app.use(express.static('public/fileserver'));
-app.use(express.static('public/uploads'));
+app.use(cors({ origin: false }), express.static('public/uploads'));
 
 
 // Короткий адрес для списка файлов
@@ -131,3 +133,5 @@ const port = process.env.PORT;
 app.listen(port, () => {
 	console.log(`Fileserver is running on port ${port}`);
 });
+
+export default app
