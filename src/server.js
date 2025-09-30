@@ -108,45 +108,52 @@ app.post('/api/upload', checkPassword, fileUpload(fileUploadOptions), async (req
 })
 
 // Дерево файлов
-app.get('/api/files', checkPassword, async (req, res) =>
-{
-	const files = await db.query(sql`SELECT * FROM files ORDER BY path`)
-	const list = []
-	const folders = new Set()
+app.get('/api/files', checkPassword, async (req, res) => {
+	const files = await db.query(sql`SELECT * FROM files ORDER BY created_at`)
+	const tree = { children: new Map(), files: [] }
+	const pathMap = new Map([['', tree]])
 
 	for (const file of files) {
 		const parts = file.path.split('/').filter(Boolean)
-		const filename = parts.pop()
-		let currentPath = ''
+		const destination = parts.slice(0, -1).join('/')
+		const filename = parts[parts.length - 1] || file.path
 
-		parts.forEach((part, index) => {
-			currentPath += '/' + part
-			if (!folders.has(currentPath)) {
-				folders.add(currentPath)
-				list.push({
-					type: 'folder',
-					name: part,
-					path: currentPath,
-					level: index
-				})
+		if (!pathMap.has(destination)) {
+			let current = tree
+			let currentPath = ''
+			for (const part of parts.slice(0, -1)) {
+				currentPath += (currentPath ? '/' : '') + part
+				if (!current.children.has(part)) {
+					current.children.set(part, { children: new Map(), files: [], path: '/' + currentPath })
+				}
+				current = current.children.get(part)
 			}
-		})
+			pathMap.set(destination, current)
+		}
 
-		list.push({
-			...file,
-			type: 'file',
-			name: filename,
-			level: parts.length
-		})
+		pathMap.get(destination).files.push({ ...file, name: filename })
 	}
 
-	list.sort((a, b) => {
-		if (a.level !== b.level) return a.level - b.level
-		if (a.type !== b.type) return a.type === 'file' ? -1 : 1
-		return new Date(a.created_at) - new Date(b.created_at)
-	})
+	const result = []
+	const traverse = (node, level) => {
+		for (const file of node.files) {
+			result.push({ ...file, type: 'file', level })
+		}
 
-	res.json(list)
+		const folders = Array.from(node.children.entries()).map(([name, folder]) => ({ name, folder })).sort((a, b) => {
+			const aTime = a.folder.files[0]?.created_at || '9999'
+			const bTime = b.folder.files[0]?.created_at || '9999'
+			return aTime.localeCompare(bTime)
+		})
+
+		for (const { name, folder } of folders) {
+			result.push({ type: 'folder', name, path: folder.path, level })
+			traverse(folder, level + 1)
+		}
+	}
+
+	traverse(tree, 0)
+	res.json(result)
 })
 
 // Заметки
