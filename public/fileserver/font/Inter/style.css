@@ -1,7 +1,9 @@
 @font-face {
 	font-family: 'Inter';
-	src: url('Inter-Regular.woff2') format('woff2');
+	src: url('regular.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
+	ascent-override: 97.75%;
+	descent-override: 25%;
+	font-feature-settings: "kern", "liga", "dlig", "zero", "cv05";
 }
-

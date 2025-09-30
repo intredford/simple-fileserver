@@ -1,7 +1,9 @@
+import { password } from '#config'
+
 const checkPassword = (req, res, next) => {
 
 	const provided = req.get('Authorization'); // насрать
-	const expected = `Basic ${process.env.PASSWORD}`;
+	const expected = `Basic ${password}`;
 
 	if (provided === expected) {
 		next();

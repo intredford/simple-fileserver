@@ -1,5 +1,4 @@
 node_modules/
-public/uploads
-database/
-.env
-.vscode
+public/uploads/*
+db.sqlite
+config.js

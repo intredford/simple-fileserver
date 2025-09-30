@@ -5,29 +5,38 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<link rel = "stylesheet" href = "./font/Inter/style.css">
-	<link rel = "stylesheet" href = "./css/main.css">
-	<link rel = "stylesheet" href = "./css/index.css">
+
+	<link rel="preload" href="/font/Inter/regular.woff2" as="font" type="font/woff2" crossorigin>
+
+	<link rel="stylesheet" href="/font/Inter/style.css">
+	<link rel="stylesheet" href="/css/main.css">
+	<link rel="stylesheet" href="/css/index.css">
 
 	<link rel="icon" type="image/png" href="/favicon.svg">
 
-	<title>Файловый сервер / загрузка</title>
+	<title>Загрузить файл</title>
 
 	<script type="module">
 		Array.prototype.last = function() { return this[this.length - 1] }
-		import { createApp } from './js/petite-vue.min.js'
+		import { createApp } from '/js/petite-vue.min.js'
 
 		createApp({
 			files: [ ],
-			deleteAfter: 24,
-			noDelete: false,
+			expiresAfter: 24,
+			unexpirable: false,
 			dragging: false,
 			uploaded: false,
 			error: false,
+			errorText: '',
+
+			get expirationDate() {
+				if (this.unexpirable) return null
+				return new Date(Date.now() + this.expiresAfter * 60 * 60 * 1000)
+			},
 			
 			handleFiles(event) {
 				const files = event.target.files
-				console.log(files)
+				console.log('new files', files)
 
 				if (this.uploaded && files.length > 0) {
 					this.files = []
@@ -36,16 +45,20 @@
 
 				for (let file of files) {
 
-					file = { 
+					file = {
 						raw: file, // сам объект `File`
+						path: file.name,
 						progress: 0,
 						previewError: false,
 					}
 
-					file.name = '/'+file.raw.name
-					file.hasPreview = file.raw.type.includes('image') && file.raw.size < 15*1024*1024
+					const hasPreview = (
+						file.raw.type.includes('image')
+						&& file.raw.size/1024/1024 < 10
+						&& Array.from(files).filter(f => f.type.includes('image')).length < 200
+					)
 
-					if (file.hasPreview) {
+					if (hasPreview) {
 						// Генерируем превью картинкам
 						const reader = new FileReader()
 						reader.onload = (e) => {
@@ -55,7 +68,7 @@
 						reader.readAsDataURL(file.raw)
 					} else {
 						// Извлекаем формат
-						file.format = file.name.split('.').last().toLowerCase()
+						file.format = file.raw.name.split('.').last().toLowerCase()
 						this.files.push(file)
 					}
 				}
@@ -85,20 +98,21 @@
 				const form = new FormData()
 
 				this.error = false
+				this.errorText = ''
 
-				form.append('deleteAfter', this.deleteAfter)
-				form.append('noDelete', this.noDelete)
+				const password = localStorage.getItem('password') || prompt('Пароль')
 
-				this.files.forEach((file, index) => {
-					form.append(file.raw.name, file.name)
-				}) // оригинальное имя файла : пользовательское имя и путь
+				form.append('expires_at', +this.expirationDate)
 
-				this.files.forEach((file, index) => {
+				this.files.forEach(file => {
+					form.append(file.path.trim(), file.raw.name)
+				})
+
+				this.files.forEach(file => {
 					form.append('files', file.raw)
-				}) // Так надо. Все файлы должны быть в конце, иначе Multer на сервере обосрётся.
+				})
 
 				xhr.upload.addEventListener('progress', event => {
-					console.log(event)
 					if (event.lengthComputable) {
 						const progress = Math.round((event.loaded / event.total) * 100)
 						this.files.forEach(file => { file.progress = progress })
@@ -107,217 +121,204 @@
 
 				xhr.open('POST', '/api/upload')
 
-				xhr.setRequestHeader('Authorization', 'Basic ' + (prompt('Пароль')))
+				xhr.setRequestHeader('Authorization', 'Basic ' + (password))
 
 				xhr.send(form)
 
 				xhr.onload = () => {
-					const response = JSON.parse(xhr.responseText);
-
+					
 					if (xhr.status === 200) {
-
+						
+						const response = JSON.parse(xhr.responseText);
 						this.error = false
 
-						this.files.forEach((file, i) => { // добавить ссылки и qr-коды
-							file.link = response[i].link 
-							file.QRCode = response[i].QRCode
+						response.forEach((file, i) => { // добавить ссылки и qr-коды
+							this.files[i].link = file.link
+							this.files[i].QRCode = file.QRCode
 						})
 						this.uploaded = true
 
 						document.querySelectorAll('input[name="url"]').forEach(input => { // прокрутить все инпуты в конец
-							input.focus();
-							input.setSelectionRange(input.value.length, input.value.length);
-							input.blur();
-						});
+							input.focus()
+							input.setSelectionRange(input.value.length, input.value.length)
+							input.blur()
+						})
 
 					} else if (xhr.status === 401) {
-						alert(response.message)
 						this.error = true
+						this.errorText = xhr.responseText
 					} else {
-						alert(`Ошибка ${xhr.status}` + response.message ? `\n ${response.message}` : '')
 						this.error = true
+						this.errorText = `Ошибка ${xhr.status}` + xhr.responseText ? `\n ${xhr.responseText}` : ''
 					}
-				};
+				}
 
 			},
 
 			hourLabel() {
-				const hours = this.deleteAfter
+				const hours = this.expiresAfter
 				if (hours % 10 === 1 && hours % 100 !== 11) return "час"
 				if (hours % 10 >= 2 && hours % 10 <= 4 && (hours % 100 < 10 || hours % 100 >= 20)) return "часа"
 				return "часов"
-			},
-
-			showInfo() {
-				alert(
-`# Файловый сервер - инструкция
-
-1. Выберите или перетащите файлы.
-2. Если надо, можно изменить название файла или добавить путь. Например, если вы напишите \`/test/path/example.png\`, то файл будет доступен по этому пути. Слеш в начале ставить не обязательно.
-3. Загрузите файлы на сервер, потребуется пароль.
-4. Готово! Теперь файлы доступны по указанным адресам.
-
-Если вы указали путь, по которому уже лежит файл с таким же именем, он будет перезаписан.
-
-Обязательно указывайте формат файла, иначе он будет отображаться неккоректно (хотя если его скачать и поставить ему формат обратно, всё будет в порядке). 
-
-Ахтунг! Файловый сервер предназначен для того, чтобы делиться файлами. Не используйте его для хранения личной информации!
-`) 
 			}
 		}).mount()
 	</script>
 </head>
 
-<body 
+<body
 	v-data="fileUpload()"
-	@drop.prevent="handleDrop" 
-	@dragenter.stop="dragging=true"
-	@dragleave.stop="dragging=false"
+	@drop.prevent="handleDrop"
 	@dragover.stop.prevent
-	@click = "dragging=false"
+	@click="dragging=false"
+	@dragenter.stop="dragging=!!event.dataTransfer?.files"
+	@dragleave.stop="dragging=false"
 >
 
-	<noscript class = "noscript">
+	<noscript class="noscript">
 		<header>
 			Включите JavaScript
 		</header>
 	</noscript>
 
-	<form 
-		class = "form" 
+	<form
+		class="form"
 		enctype="multipart/form-data"
-		:style = "{ 'pointer-events': dragging ? 'none' : 'auto' }"
 		@submit.prevent="uploadFiles"
 	>
 		
-		<div style = "width: fit-content; margin: auto;">
-			<input 
-				type="file" 
-				id="fileInput" 
-				name="files" 
-				multiple 
-				accept="*/*" 
+		<div class="form-add">
+			<input
+				type="file"
+				id="file-input"
+				name="files"
+				multiple
+				accept="*/*"
 				@input="handleFiles"
 			>
-			<label class = "form-file" for = "fileInput">📎 Выберите файлы</label>
-			<div 
-				class = "drag-n-drop"
-				v-show = "dragging"
+			<label class="form-file" for="file-input">
+				Выбрать файлы...
+			</label>
+			<div
+				class="drag-n-drop"
+				v-show="dragging"
 			></div>
 		</div>
 
-		<div v-if = "files.length">
-			<hr style = "margin-top: 1em">
+		<label class="form-overlay" for="file-input" v-show="!files.length"></label>
 
-			<div class = "files">
-				<div 
-					class = "file"
-					v-for = "file, index in files"
-				>
+		<div class="files" v-if="files.length">
+			<div
+				class="file"
+				v-for="file, index in files"
+			>
 
-					<div class = "file-preview">
-
-						<img
-							v-if = "file.hasPreview"
-							:src = "file.preview"
-						>
-						<img
-							v-else-if = "!file.previewError"
-							class = "icon"
-							:src = "`/icons/high-contrast/${file.format}.svg`"
-							@error = "setPreviewError(index)"
-						>
-						<span
-							v-else-if = "file.format.length <= 4"
-							class = "file-format"
-							>
-							{{ file.format }}
-						</span>
-						<img
-							v-else
-							class = "icon"
-							:src = "`/icons/high-contrast/blank.svg`"
-						>
-					</div>
-
-					<div 
-						class = "file-name"
-					>
-						<input 
-							v-model = "file.link ? file.link : file.name" 
-							name = "url"
-							size = "22"
-							placeholder="URL файла"
-							:title = "file.QRCode ? 'Ссылка на файл' : 'Относительный адрес файла'"
-							v-bind = "file.link ? { readonly: true } : {}"
-							required
-						>
-						<div class = "file-progress">
-							<div 
-								class = "file-progress-value"
-								:style = "{ 
-									width: file.progress + '%',
-									'background-color': file.progress < 100 ? '#0073ee' : error ? 'red' : '#67d264'
-								}"
-								v-if = "file.progress"
-							></div>
-						</div>
-					</div>
-
-					<div class = "file-remove" v-if = "!file.QRCode">
-						<button @click = "removeFile(index)" type = "button"><span>╳</span></button>
-					</div>
+				<div class="file-preview">
 
 					<img
-						class = "file-qrcode"
-						:src = "file.QRCode"
-						alt = "QR-код"
-						v-else
+						v-if="file.preview"
+						:src="file.preview"
 					>
-
+					<img
+						v-else-if="!file.previewError"
+						class="icon"
+						:src="`/icons/high-contrast/${file.format}.svg`"
+						@error="setPreviewError(index)"
+					>
+					<span
+						v-else-if="file.format.length <= 4"
+						class="file-format"
+						>
+						{{ file.format }}
+					</span>
+					<img
+						v-else
+						class="icon"
+						:src="`/icons/high-contrast/blank.svg`"
+					>
 				</div>
-			</div>
 
-			<hr>
+				<div class="file-name">
+					<input
+						v-model="file.link ? file.link : file.path"
+						name="url"
+						size="22"
+						placeholder="URL файла"
+						:title="file.QRCode ? 'Ссылка на файл' : 'Относительный адрес файла'"
+						v-bind="file.link ? { readonly: true } : {}"
+						required
+					>
+					<div class="file-progress">
+						<div
+							class="file-progress-value"
+							:style="{
+								width: error ? '0%' : file.progress + '%',
+								'background-color': file.progress < 100 ? 'var(--color-blue)' : error ? 'red' : '#67d264'
+							}"
+							v-if="file.progress"
+						></div>
+					</div>
+				</div>
 
-			<div class = "form-field" :class = "{'disabled': noDelete}">
-				<label for="deleteAfter">Удалить через</label>
-				<input 
-					v-model="deleteAfter"
-					:disabled = "noDelete"
-					type="number" 
-					id="deleteAfter" 
-					name="deleteAfter" 
-					min="1" 
-					size="2"
-					step="1"
-					required
-					style="appearance: textfield; height: 1.5em"
+				<div
+					class="file-remove"
+					v-if="!file.QRCode"
+					role="button"
+					tabindex="0"
+					@click="removeFile(index)"
+					title="Убрать файл"
+				>✕</div>
+
+				<img
+					class="file-qrcode"
+					:src="file.QRCode"
+					alt="QR-код"
+					v-else
 				>
-				<label for="deleteAfter">{{ hourLabel() }}</label>
-			</div>
 
-			<div class = "form-field">
-				<input 
-					type="checkbox" 
-					id="noDelete" 
-					name="noDelete"
-					v-model="noDelete"
-				><label for="noDelete">Не удалять</label>
 			</div>
+		</div>
 
-			<button 
-				class = "form-upload"
-				type="submit"
+		<div class="form-field" :class="{'disabled': unexpirable}" v-if="files.length">
+			<label for="expires-after">Удалить через</label>
+			<input
+				v-model="expiresAfter"
+				:disabled="unexpirable"
+				type="number"
+				id="expires-after"
+				name="expires-after"
+				min="1"
+				size="2"
+				step="1"
+				required
+				style="appearance: textfield; height: 1.5em"
 			>
-				Загрузить
-			</button>
+			<label for="expires-after">{{ hourLabel() }}</label>
+		</div>
 
+		<div class="form-field" v-if="files.length">
+			<input
+				type="checkbox"
+				id="unexpirable"
+				name="unexpirable"
+				v-model="unexpirable"
+			><label for="unexpirable">Не удалять</label>
+		</div>
+
+		<button
+			class="form-upload blue"
+			type="submit"
+			v-if="files.length"
+		>
+			Загрузить
+		</button>
+
+		<div class="form-message" v-if="error">
+			<div class="form-error">
+				Ошибка: {{ errorText }}
+			</div>
 		</div>
 	
 	</form>
-
-	<button class = "info" @click = "showInfo" title = "Справка">?</button>
 
 </body>
 
