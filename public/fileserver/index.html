@@ -23,14 +23,14 @@
 		createApp({
 			files: [ ],
 			expiresAfter: 24,
-			unexpirable: false,
+			expirationType: 'expirable',
 			dragging: false,
 			uploaded: false,
 			error: false,
 			errorText: '',
 
 			get expirationDate() {
-				if (this.unexpirable) return null
+				if (this.expirationType === 'unexpirable') return null
 				return new Date(Date.now() + this.expiresAfter * 60 * 60 * 1000)
 			},
 			
@@ -278,30 +278,28 @@
 			</div>
 		</div>
 
-		<div class="form-field" :class="{'disabled': unexpirable}" v-if="files.length">
-			<label for="expires-after">Удалить через</label>
-			<input
-				v-model="expiresAfter"
-				:disabled="unexpirable"
-				type="number"
-				id="expires-after"
-				name="expires-after"
-				min="1"
-				size="2"
-				step="1"
-				required
-				style="appearance: textfield; height: 1.5em"
-			>
-			<label for="expires-after">{{ hourLabel() }}</label>
-		</div>
-
 		<div class="form-field" v-if="files.length">
-			<input
-				type="checkbox"
-				id="unexpirable"
-				name="unexpirable"
-				v-model="unexpirable"
-			><label for="unexpirable">Не удалять</label>
+			<label>
+				<input type="radio" name="expiration-type" value="expirable" v-model="expirationType">Удалить через
+				<input
+					v-model="expiresAfter"
+					:class="expirationType === 'unexpirable' ? 'disabled' : ''"
+					type="number"
+					id="expires-after"
+					name="expires-after"
+					min="1"
+					size="2"
+					step="1"
+					required
+					style="appearance: textfield; height: 1.5em"
+					@input="expirationType = 'expirable'"
+				>
+				<label for="expires-after">{{ hourLabel() }}</label>
+			</label>
+			<br>
+			<label>
+				<input type="radio" name="expiration-type" value="unexpirable" v-model="expirationType">Не удалять
+			</label>
 		</div>
 
 		<button

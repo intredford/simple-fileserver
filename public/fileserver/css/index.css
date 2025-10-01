@@ -2,7 +2,7 @@
 	margin-top: 15vh;
 	margin-bottom: 2em;
 	height: fit-content;
-	width: calc(425px + 0.5em*2);
+	width: min(100%, calc(375px + 0.5em*2));
 	padding: 0 0.5em;
 }
 	.form-add {
@@ -129,16 +129,17 @@
 		opacity: 0;
 	}
 
-#expires-after:disabled ~ label,
-label:has(+#expires-after:disabled) {
+input.disabled:not(:hover):not(:focus),
+input.disabled:not(:hover):not(:focus)+label {
 	opacity: 0.4;
 }
 
-#unexpirable {
-	height: 1.5em;
+input[type="radio"] {
+	height: 1.1em;
 	aspect-ratio: 1/1;
 	margin-right: 0.5em;
-	vertical-align: text-top;
+	vertical-align: baseline;
+	margin-left: calc(-1.1em - 0.5em);
 }
 
 .drag-n-drop {

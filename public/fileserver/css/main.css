@@ -12,11 +12,11 @@
 	--color-dark: oklch(0.3 0 0);
 	--color-gray: oklch(0.5 0 0);
 	--color-grayish: oklch(0.8 0 0);
-	--color-light: oklch(0.92 0 0);
+	--color-light: oklch(0.9 0 0);
 	--color-lighter: oklch(0.97 0 0);
 	--color-white: oklch(1 0 0);
 
-	--button-pseudovolume: 0.1em;
+	--button-pseudovolume: 0.05em;
 }
 body {
 	margin: 0;
@@ -25,7 +25,7 @@ body {
 	font-family: 'Inter', sans-serif;
 	text-rendering: optimizeLegibility;
 	line-height: 1.3;
-	font-size: 20px;
+	font-size: 18px;
 	min-height: 100vh;
 	background-color: var(--color-white);
 	color: var(--color-black);
@@ -60,7 +60,7 @@ input[type="file"] + label {
 		color-mix(in oklab, var(--color), var(--color-white) var(--bottom-pct))
 	);
 
-	border: 2px solid;
+	border: 1px solid;
 	border-color: color-mix(in srgb, var(--color), var(--color-light) var(--border-pct));
 	border-radius: 0.4em;
 	padding: 0.33em 1em;
@@ -111,7 +111,7 @@ input[type="file"] {
 
 /* Стили для текстовых полей */
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
-	border: 2px solid var(--color-light);
+	border: 1px solid var(--color-light);
 	padding: 0.33em;
 	border-radius: 0.2em;
 	font-family: inherit;
@@ -121,7 +121,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
 	color: inherit;
 }
 
-.disabled, .disabled * {
+.disabled * {
 	cursor: not-allowed !important;
 }
 
