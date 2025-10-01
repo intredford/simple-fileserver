@@ -116,7 +116,7 @@
 		}
 	.file-qrcode {
 		image-rendering: pixelated;
-		transition: 0.08s transform;
+		transition: 0.08s transform, 0.1s opacity;
 		transition-delay: 0.5s;
 		z-index: 1;
 	}
