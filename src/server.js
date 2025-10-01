@@ -39,7 +39,8 @@ app.post('/api/upload', checkPassword, fileUpload(fileUploadOptions), async (req
 
 	const response = []
 
-	const expiration = new Date(+records.expires_at) || null
+	const expirable = +records.expires_at && !isNaN(+records.expires_at)
+	const expiration = expirable ? new Date(+records.expires_at) : null
 	delete records.expires_at
 
 	records = Object.entries(records).map(([path, name]) => ({ path: normalize(path), name }))
