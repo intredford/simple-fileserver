@@ -17,12 +17,13 @@
 			saving: false,
 			error: '',
 			saveTimer: null,
+			password: '',
 	
 			async requestText() {
-				const password = localStorage.getItem('password') || prompt('Пароль')
+				this.password = localStorage.getItem('password') || prompt('Пароль')
 				this.text = await fetch('/api/note', {
 					headers: {
-						'Authorization': 'Basic ' + password
+						'Authorization': 'Basic ' + this.password
 					}
 				}).then(res => {
 					const textarea = document.querySelector('textarea')
@@ -43,7 +44,7 @@
 					await fetch('/api/note', {
 						method: 'POST',
 						headers: {
-							'Authorization': 'Basic ' + localStorage.getItem('password'),
+							'Authorization': 'Basic ' + this.password,
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({ text: this.text })
